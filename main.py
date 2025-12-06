@@ -19,7 +19,6 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     modified_date = Column(DateTime, default=datetime.datetime.now)
-
     jobs_as_leader = relationship("Jobs", back_populates="team_leader_user")
 
     def __repr__(self):
@@ -50,6 +49,7 @@ class Department(Base):
     email = Column(String, unique=True, nullable=False)
 
 Base.metadata.create_all(engine)
+
 session = Session()
 
 if session.query(User).count() == 0:
@@ -60,7 +60,7 @@ if session.query(User).count() == 0:
         position='captain',
         speciality='research engineer',
         address='module_1',
-        email='SCap@mars.com',
+        email='scott_chief@mars.org',
         hashed_password='hash123'
     )
     session.add(captain)
@@ -122,7 +122,7 @@ if session.query(User).count() == 0:
 
     if session.query(Jobs).count() == 0:
         first_job = Jobs(
-            team_leader=captain.id,
+            team_leader=captain.id, 
             job='deployment of residential modules 1 and 2',
             work_size=15,
             collaborators='2, 3',
@@ -136,7 +136,7 @@ if session.query(User).count() == 0:
         geology_dept = Department(
             title='Geological Survey',
             chief=colonist2.id, 
-            members='2, 3, 5',
+            members='2, 3, 5', 
             email='geology@mars.org'
         )
         session.add(geology_dept)
@@ -228,16 +228,17 @@ def task_12(db_name):
     session = Session()
     dept = session.query(Department).filter(Department.id == 1).first()
     if not dept:
-        print("Department with id=1 not found.")
+        print("dep with id=1 not found.")
         session.close()
         return
 
     try:
         dept_members_ids = {int(x.strip()) for x in dept.members.split(',') if x.strip()}
     except ValueError:
-        print("Error parsing department members list.")
+        print("Error pushing dep-list.")
         session.close()
         return
+
     for member_id in dept_members_ids:
         user = session.query(User).filter(User.id == member_id).first()
         if not user:
@@ -252,7 +253,6 @@ def task_12(db_name):
                     total_hours += job.work_size
             except ValueError:
                 continue
-
         if total_hours > 25:
             print(f"{user.surname} {user.name}")
 
@@ -260,30 +260,33 @@ def task_12(db_name):
 
 if __name__ == "__main__":
     db_name = "mars_explorer.db"
-    print("\n----------------------")
+    print("--- Task 4 ---")
     task_4(db_name)
-    print("\n----------------------")
+    print("\n--- Task 5 ---")
     task_5(db_name)
-    print("\n----------------------")
+    print("\n--- Task 6 ---")
     task_6(db_name)
-    print("\n----------------------")
+    print("\n--- Task 7 ---")
     task_7(db_name)
-    print("\n----------------------")
+    print("\n--- Task 8 ---")
     task_8(db_name)
-    print("\n----------------------")
+    print("\n--- Task 9 ---")
     task_9(db_name)
-    print("\n----------------------")
+    print("\n--- Task 10 (before) ---")
     session = Session()
     pre_update_users = session.query(User).filter(User.address.like('module_1')).all()
     for u in pre_update_users:
         print(f"ID: {u.id}, Name: {u.name}, Surname: {u.surname}, Age: {u.age}, Address: {u.address}")
     session.close()
+
     task_10(db_name)
-    print("\n----------------------")
+
+    print("\n--- Task 10 (after) ---")
     session = Session()
     post_update_users = session.query(User).filter(User.address.like('module_3')).all()
     for u in post_update_users:
         print(f"ID: {u.id}, Name: {u.name}, Surname: {u.surname}, Age: {u.age}, Address: {u.address}")
     session.close()
-    print("\n----------------------")
+
+    print("\n--- Task 12 ---")
     task_12(db_name)
