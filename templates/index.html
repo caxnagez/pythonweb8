@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Job List</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Job Description</th>
+            <th>Team Leader</th>
+            <th>Work Size (hours)</th>
+            <th>Collaborators</th>
+            <th>Finished</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.job }}</td>
+            <td>{{ users.get(job.team_leader, 'N/A') }}</td>
+            <td>{{ job.work_size }}</td>
+            <td>{{ job.collaborators }}</td>
+            <td>{{ 'Yes' if job.is_finished else 'No' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

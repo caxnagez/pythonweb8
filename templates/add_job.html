@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Add Job - Mars Explorer{% endblock %}
+
+{% block content %}
+<h2>Add New Job</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label for="team_leader_id" class="form-label">Team Leader ID:</label>
+        <select class="form-control" id="team_leader_id" name="team_leader_id" required>
+            {% for user in users %}
+                <option value="{{ user.id }}">{{ user.id }} - {{ user.surname }} {{ user.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="job_description" class="form-label">Job Description:</label>
+        <textarea class="form-control" id="job_description" name="job_description" rows="3" required></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="work_size" class="form-label">Work Size (hours):</label>
+        <input type="number" class="form-control" id="work_size" name="work_size" min="1" required>
+    </div>
+    <div class="mb-3">
+        <label for="collaborators" class="form-label">Collaborators (comma-separated IDs):</label>
+        <input type="text" class="form-control" id="collaborators" name="collaborators" placeholder="e.g., 1, 2, 3" required>
+    </div>
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="is_finished" name="is_finished">
+        <label class="form-check-label" for="is_finished">Is Finished?</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Job</button>
+</form>
+{% endblock %}
