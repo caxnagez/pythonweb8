@@ -1,43 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Add Job - Mars Explorer{% endblock %}
+{% block title %}Edit Job - Mars Explorer{% endblock %}
 
 {% block content %}
-<h2>Add New Job</h2>
+<h2>Edit Job: {{ job.job }}</h2>
 <form method="POST">
     <div class="mb-3">
         <label for="team_leader_id" class="form-label">Team Leader:</label>
         <select class="form-control" id="team_leader_id" name="team_leader_id" required>
             {% for user in users %}
-                <option value="{{ user.id }}">{{ user.full_name }}</option>
+                <option value="{{ user.id }}" {% if user.id == job.team_leader %}selected{% endif %}>{{ user.full_name }}</option>
             {% endfor %}
         </select>
     </div>
     <div class="mb-3">
         <label for="job_description" class="form-label">Job Description:</label>
-        <textarea class="form-control" id="job_description" name="job_description" rows="3" required></textarea>
+        <textarea class="form-control" id="job_description" name="job_description" rows="3" required>{{ job.job }}</textarea>
     </div>
     <div class="mb-3">
         <label for="work_size" class="form-label">Work Size (hours):</label>
-        <input type="number" class="form-control" id="work_size" name="work_size" min="1" required>
+        <input type="number" class="form-control" id="work_size" name="work_size" min="1" value="{{ job.work_size }}" required>
     </div>
     <div class="mb-3">
         <label for="collaborators" class="form-label">Collaborators (comma-separated IDs):</label>
-        <input type="text" class="form-control" id="collaborators" name="collaborators" placeholder="e.g., 1, 2, 3" required>
+        <input type="text" class="form-control" id="collaborators" name="collaborators" value="{{ job.collaborators }}" required>
     </div>
     <div class="mb-3">
         <label class="form-label">Categories:</label><br>
         {% for category in categories %}
             <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="categories" id="cat_{{ category.id }}" value="{{ category.id }}">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat_{{ category.id }}" value="{{ category.id }}"
+                       {% if category in job.categories %}checked{% endif %}>
                 <label class="form-check-label" for="cat_{{ category.id }}">{{ category.name }}</label>
             </div>
         {% endfor %}
     </div>
     <div class="mb-3 form-check">
-        <input type="checkbox" class="form-check-input" id="is_finished" name="is_finished">
+        <input type="checkbox" class="form-check-input" id="is_finished" name="is_finished" {% if job.is_finished %}checked{% endif %}>
         <label class="form-check-label" for="is_finished">Is Finished?</label>
     </div>
-    <button type="submit" class="btn btn-primary">Add Job</button>
+    <button type="submit" class="btn btn-primary">Update Job</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

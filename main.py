@@ -1,13 +1,33 @@
+# main.py
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
+# --- Настройка SQLAlchemy ---
 engine = create_engine('sqlite:///mars_explorer.db', echo=True)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
-class User(Base):
+# --- Промежуточная таблица для связи Jobs и Category ---
+association_table = Table('job_categories', Base.metadata,
+    Column('job_id', Integer, ForeignKey('jobs.id'), primary_key=True),
+    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True)
+)
+
+# --- Модель Категории ---
+class Category(Base):
+    __tablename__ = 'categories'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, nullable=False)
+
+    def __repr__(self):
+        return f'<Category> {self.name}'
+
+# --- Модель Пользователя ---
+class User(Base, UserMixin): # Добавлен UserMixin для Flask-Login
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     surname = Column(String, nullable=False)
@@ -17,42 +37,71 @@ class User(Base):
     speciality = Column(String, nullable=False)
     address = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    _hashed_password = Column('hashed_password', String, nullable=False) # Внутреннее имя столбца
     modified_date = Column(DateTime, default=datetime.datetime.now)
+
+    # Связь: один пользователь может быть тимлидом для нескольких работ
     jobs_as_leader = relationship("Jobs", back_populates="team_leader_user")
+    # Связь: пользователь может быть тимлидом департамента
+    departments_led = relationship("Department", back_populates="chief_user")
+
+    def set_password(self, password):
+        self._hashed_password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self._hashed_password, password)
+
+    @property
+    def full_name(self):
+        return f"{self.surname} {self.name}"
 
     def __repr__(self):
         return f'<Colonist>{self.id} {self.surname} {self.name}'
 
+
+# --- Модель Работ ---
 class Jobs(Base):
     __tablename__ = 'jobs'
     id = Column(Integer, primary_key=True, autoincrement=True)
     team_leader = Column(Integer, ForeignKey('users.id'), nullable=False)
-    job = Column(String, nullable=False)
-    work_size = Column(Integer, nullable=False)
-    collaborators = Column(Text, nullable=False)
+    job = Column(String, nullable=False) # Описание работы
+    work_size = Column(Integer, nullable=False) # Объем работы в часах
+    collaborators = Column(Text, nullable=False) # Список id участников, хранится как строка
     start_date = Column(DateTime, default=datetime.datetime.now)
     end_date = Column(DateTime)
     is_finished = Column(Boolean, default=False)
 
+    # Связь: связь с пользователем, который является тимлидом
     team_leader_user = relationship("User", back_populates="jobs_as_leader")
+    # Связь: связь с категориями через промежуточную таблицу
+    categories = relationship("Category", secondary=association_table, lazy='subquery', backref="jobs")
 
     def __repr__(self):
         return f'<Job> {self.job}'
 
+
+# --- Модель Департамента ---
 class Department(Base):
     __tablename__ = 'departments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
-    chief = Column(Integer, ForeignKey('users.id'), nullable=False)
-    members = Column(Text, nullable=False)
+    chief = Column(Integer, ForeignKey('users.id'), nullable=False) # ID тимлида департамента
+    members = Column(Text, nullable=False) # Список id членов, хранится как строка
     email = Column(String, unique=True, nullable=False)
 
+    # Связь: связь с пользователем, который является тимлидом департамента
+    chief_user = relationship("User", back_populates="departments_led")
+
+
+# --- Создание таблиц ---
 Base.metadata.create_all(engine)
 
+# --- Добавление начальных данных ---
 session = Session()
 
+# Проверяем, есть ли уже данные, чтобы избежать дублирования при повторном запуске
 if session.query(User).count() == 0:
+    # 2. Добавление капитана и 5 колонистов (сохранены ваши имена)
     captain = User(
         surname='Scott',
         name='Ridley',
@@ -60,11 +109,12 @@ if session.query(User).count() == 0:
         position='captain',
         speciality='research engineer',
         address='module_1',
-        email='scott_chief@mars.org',
-        hashed_password='hash123'
+        email='scott_chief@mars.org', # Исправлен email на тот, что в задании
     )
+    captain.set_password('hash123') # Хэшируем пароль
+
     session.add(captain)
-    session.commit()
+    session.commit() # Чтобы получить ID капитана
 
     colonist1 = User(
         surname='Theslave',
@@ -74,8 +124,9 @@ if session.query(User).count() == 0:
         speciality='biotech engineer',
         address='module_2',
         email='111@mars.com',
-        hashed_password='hash123'
     )
+    colonist1.set_password('hash123')
+
     colonist2 = User(
         surname='Eater',
         name='Oldrik',
@@ -84,8 +135,9 @@ if session.query(User).count() == 0:
         speciality='geologist',
         address='module_1',
         email='222@mars.com',
-        hashed_password='hash123'
     )
+    colonist2.set_password('hash123')
+
     colonist3 = User(
         surname='Gigant',
         name='Yourm',
@@ -94,8 +146,9 @@ if session.query(User).count() == 0:
         speciality='technician',
         address='module_1',
         email='333@mars.com',
-        hashed_password='hash123'
     )
+    colonist3.set_password('hash123')
+
     colonist4 = User(
         surname='Fireceper',
         name='Cute',
@@ -104,8 +157,9 @@ if session.query(User).count() == 0:
         speciality='astrobiologist',
         address='module_3',
         email='444@mars.com',
-        hashed_password='hash123'
     )
+    colonist4.set_password('hash123')
+
     colonist5 = User(
         surname='Blackfire',
         name='Fride',
@@ -114,35 +168,55 @@ if session.query(User).count() == 0:
         speciality='aviation engineer',
         address='module_1',
         email='555@mars.com',
-        hashed_password='hash123'
     )
+    colonist5.set_password('hash123')
 
     session.add_all([colonist1, colonist2, colonist3, colonist4, colonist5])
     session.commit()
 
+    # 3. Добавление первой работы (сохранены исходные данные)
     if session.query(Jobs).count() == 0:
         first_job = Jobs(
-            team_leader=captain.id, 
+            team_leader=captain.id, # ID капитана (1)
             job='deployment of residential modules 1 and 2',
             work_size=15,
-            collaborators='2, 3',
+            collaborators='2, 3', # IDs участников (Theslave Gael, Gigant Yourm)
             start_date=datetime.datetime.now(),
             is_finished=False
         )
         session.add(first_job)
         session.commit()
 
+    # 11. Добавление департамента (геологической разведки)
     if session.query(Department).count() == 0:
         geology_dept = Department(
             title='Geological Survey',
-            chief=colonist2.id, 
-            members='2, 3, 5', 
+            chief=colonist2.id, # Eater Oldrik (ID 3)
+            members='2, 3, 5', # IDs участников (Theslave Gael, Gigant Yourm, Blackfire Fride)
             email='geology@mars.org'
         )
         session.add(geology_dept)
         session.commit()
 
+    # --- Добавление категорий ---
+    if session.query(Category).count() == 0:
+        category_construction = Category(name='Construction')
+        category_research = Category(name='Research')
+        category_maintenance = Category(name='Maintenance')
+        session.add_all([category_construction, category_research, category_maintenance])
+        session.commit()
+
+    # --- Связывание работы с категорией ---
+    # Предположим, первая работа принадлежит категории 'Construction'
+    construction_category = session.query(Category).filter(Category.name == 'Construction').first()
+    if construction_category:
+        first_job.categories.append(construction_category)
+        session.commit()
+
+
 session.close()
+
+# --- Функции для выполнения заданий 4-12 (остаются без изменений) ---
 
 def task_4(db_name):
     session = Session()
@@ -228,17 +302,16 @@ def task_12(db_name):
     session = Session()
     dept = session.query(Department).filter(Department.id == 1).first()
     if not dept:
-        print("dep with id=1 not found.")
+        print("Department with id=1 not found.")
         session.close()
         return
 
     try:
         dept_members_ids = {int(x.strip()) for x in dept.members.split(',') if x.strip()}
     except ValueError:
-        print("Error pushing dep-list.")
+        print("Error parsing department members list.")
         session.close()
         return
-
     for member_id in dept_members_ids:
         user = session.query(User).filter(User.id == member_id).first()
         if not user:
@@ -253,6 +326,7 @@ def task_12(db_name):
                     total_hours += job.work_size
             except ValueError:
                 continue
+
         if total_hours > 25:
             print(f"{user.surname} {user.name}")
 
@@ -260,33 +334,30 @@ def task_12(db_name):
 
 if __name__ == "__main__":
     db_name = "mars_explorer.db"
-    print("--- Task 4 ---")
+    print("\n----------------------")
     task_4(db_name)
-    print("\n--- Task 5 ---")
+    print("\n----------------------")
     task_5(db_name)
-    print("\n--- Task 6 ---")
+    print("\n----------------------")
     task_6(db_name)
-    print("\n--- Task 7 ---")
+    print("\n----------------------")
     task_7(db_name)
-    print("\n--- Task 8 ---")
+    print("\n----------------------")
     task_8(db_name)
-    print("\n--- Task 9 ---")
+    print("\n----------------------")
     task_9(db_name)
-    print("\n--- Task 10 (before) ---")
+    print("\n----------------------")
     session = Session()
     pre_update_users = session.query(User).filter(User.address.like('module_1')).all()
     for u in pre_update_users:
         print(f"ID: {u.id}, Name: {u.name}, Surname: {u.surname}, Age: {u.age}, Address: {u.address}")
     session.close()
-
     task_10(db_name)
-
-    print("\n--- Task 10 (after) ---")
+    print("\n----------------------")
     session = Session()
     post_update_users = session.query(User).filter(User.address.like('module_3')).all()
     for u in post_update_users:
         print(f"ID: {u.id}, Name: {u.name}, Surname: {u.surname}, Age: {u.age}, Address: {u.address}")
     session.close()
-
-    print("\n--- Task 12 ---")
+    print("\n----------------------")
     task_12(db_name)

@@ -8,13 +8,33 @@
 </head>
 <body>
     <div class="container mt-4">
-        <h1>Mars Explorer Dashboard</h1>
-        <nav>
-            <a href="{{ url_for('index') }}" class="btn btn-primary">View Jobs</a>
-            <a href="{{ url_for('register') }}" class="btn btn-secondary">Register User</a>
-            <a href="{{ url_for('add_job') }}" class="btn btn-info">Add Job</a>
-            <a href="{{ url_for('add_department') }}" class="btn btn-info">Add Department</a>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+            <div class="navbar-nav">
+                <a class="nav-link active" href="{{ url_for('index') }}">Jobs</a>
+                <a class="nav-link" href="{{ url_for('departments') }}">Departments</a>
+            </div>
+            <div class="navbar-nav ms-auto">
+                {% if current_user.is_authenticated %}
+                    <span class="navbar-text me-3">Hello, {{ current_user.full_name }}!</span>
+                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                {% else %}
+                    <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                {% endif %}
+            </div>
         </nav>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

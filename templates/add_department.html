@@ -10,10 +10,10 @@
         <input type="text" class="form-control" id="title" name="title" required>
     </div>
     <div class="mb-3">
-        <label for="chief_id" class="form-label">Chief User ID:</label>
+        <label for="chief_id" class="form-label">Chief User:</label>
         <select class="form-control" id="chief_id" name="chief_id" required>
             {% for user in users %}
-                <option value="{{ user.id }}">{{ user.id }} - {{ user.surname }} {{ user.name }}</option>
+                <option value="{{ user.id }}">{{ user.full_name }}</option>
             {% endfor %}
         </select>
     </div>

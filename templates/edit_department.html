@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Department - Mars Explorer{% endblock %}
+
+{% block content %}
+<h2>Edit Department: {{ dept.title }}</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label for="title" class="form-label">Title:</label>
+        <input type="text" class="form-control" id="title" name="title" value="{{ dept.title }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="chief_id" class="form-label">Chief User:</label>
+        <select class="form-control" id="chief_id" name="chief_id" required>
+            {% for user in users %}
+                <option value="{{ user.id }}" {% if user.id == dept.chief %}selected{% endif %}>{{ user.full_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="members" class="form-label">Members (comma-separated IDs):</label>
+        <input type="text" class="form-control" id="members" name="members" value="{{ dept.members }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Department Email:</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{ dept.email }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Update Department</button>
+    <a href="{{ url_for('departments') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
