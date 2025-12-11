@@ -6,3 +6,8 @@
 ![alt text](images/5.png)
 ![alt text](images/6.png)
 **---------------9 LAB UPDATE---------------**
+![alt text](images/7.png)
+![alt text](images/8.png)
+![alt text](images/9.png)
+![alt text](images/10.png)
+![alt text](images/11.png)

@@ -1,4 +1,3 @@
-# main.py
 import datetime
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
@@ -6,18 +5,13 @@ from sqlalchemy.orm import sessionmaker, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 
-# --- Настройка SQLAlchemy ---
 engine = create_engine('sqlite:///mars_explorer.db', echo=True)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
-
-# --- Промежуточная таблица для связи Jobs и Category ---
 association_table = Table('job_categories', Base.metadata,
     Column('job_id', Integer, ForeignKey('jobs.id'), primary_key=True),
-    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True)
-)
+    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True))
 
-# --- Модель Категории ---
 class Category(Base):
     __tablename__ = 'categories'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -26,8 +20,7 @@ class Category(Base):
     def __repr__(self):
         return f'<Category> {self.name}'
 
-# --- Модель Пользователя ---
-class User(Base, UserMixin): # Добавлен UserMixin для Flask-Login
+class User(Base, UserMixin):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     surname = Column(String, nullable=False)
@@ -37,12 +30,10 @@ class User(Base, UserMixin): # Добавлен UserMixin для Flask-Login
     speciality = Column(String, nullable=False)
     address = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
-    _hashed_password = Column('hashed_password', String, nullable=False) # Внутреннее имя столбца
+    _hashed_password = Column('hashed_password', String, nullable=False)
     modified_date = Column(DateTime, default=datetime.datetime.now)
 
-    # Связь: один пользователь может быть тимлидом для нескольких работ
     jobs_as_leader = relationship("Jobs", back_populates="team_leader_user")
-    # Связь: пользователь может быть тимлидом департамента
     departments_led = relationship("Department", back_populates="chief_user")
 
     def set_password(self, password):
@@ -58,50 +49,38 @@ class User(Base, UserMixin): # Добавлен UserMixin для Flask-Login
     def __repr__(self):
         return f'<Colonist>{self.id} {self.surname} {self.name}'
 
-
-# --- Модель Работ ---
 class Jobs(Base):
     __tablename__ = 'jobs'
     id = Column(Integer, primary_key=True, autoincrement=True)
     team_leader = Column(Integer, ForeignKey('users.id'), nullable=False)
-    job = Column(String, nullable=False) # Описание работы
-    work_size = Column(Integer, nullable=False) # Объем работы в часах
-    collaborators = Column(Text, nullable=False) # Список id участников, хранится как строка
+    job = Column(String, nullable=False)
+    work_size = Column(Integer, nullable=False)
+    collaborators = Column(Text, nullable=False)
     start_date = Column(DateTime, default=datetime.datetime.now)
     end_date = Column(DateTime)
     is_finished = Column(Boolean, default=False)
 
-    # Связь: связь с пользователем, который является тимлидом
     team_leader_user = relationship("User", back_populates="jobs_as_leader")
-    # Связь: связь с категориями через промежуточную таблицу
     categories = relationship("Category", secondary=association_table, lazy='subquery', backref="jobs")
 
     def __repr__(self):
         return f'<Job> {self.job}'
 
-
-# --- Модель Департамента ---
 class Department(Base):
     __tablename__ = 'departments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
-    chief = Column(Integer, ForeignKey('users.id'), nullable=False) # ID тимлида департамента
-    members = Column(Text, nullable=False) # Список id членов, хранится как строка
+    chief = Column(Integer, ForeignKey('users.id'), nullable=False)
+    members = Column(Text, nullable=False)
     email = Column(String, unique=True, nullable=False)
 
-    # Связь: связь с пользователем, который является тимлидом департамента
     chief_user = relationship("User", back_populates="departments_led")
 
-
-# --- Создание таблиц ---
 Base.metadata.create_all(engine)
 
-# --- Добавление начальных данных ---
 session = Session()
 
-# Проверяем, есть ли уже данные, чтобы избежать дублирования при повторном запуске
 if session.query(User).count() == 0:
-    # 2. Добавление капитана и 5 колонистов (сохранены ваши имена)
     captain = User(
         surname='Scott',
         name='Ridley',
@@ -109,12 +88,12 @@ if session.query(User).count() == 0:
         position='captain',
         speciality='research engineer',
         address='module_1',
-        email='scott_chief@mars.org', # Исправлен email на тот, что в задании
+        email='chief@mars.com',
     )
-    captain.set_password('hash123') # Хэшируем пароль
+    captain.set_password('hash123')
 
     session.add(captain)
-    session.commit() # Чтобы получить ID капитана
+    session.commit()
 
     colonist1 = User(
         surname='Theslave',
@@ -174,31 +153,28 @@ if session.query(User).count() == 0:
     session.add_all([colonist1, colonist2, colonist3, colonist4, colonist5])
     session.commit()
 
-    # 3. Добавление первой работы (сохранены исходные данные)
     if session.query(Jobs).count() == 0:
         first_job = Jobs(
-            team_leader=captain.id, # ID капитана (1)
+            team_leader=captain.id,
             job='deployment of residential modules 1 and 2',
             work_size=15,
-            collaborators='2, 3', # IDs участников (Theslave Gael, Gigant Yourm)
+            collaborators='2, 3', #(Theslave Gael, Gigant Yourm)
             start_date=datetime.datetime.now(),
             is_finished=False
         )
         session.add(first_job)
         session.commit()
 
-    # 11. Добавление департамента (геологической разведки)
     if session.query(Department).count() == 0:
         geology_dept = Department(
             title='Geological Survey',
-            chief=colonist2.id, # Eater Oldrik (ID 3)
-            members='2, 3, 5', # IDs участников (Theslave Gael, Gigant Yourm, Blackfire Fride)
+            chief=colonist2.id, # Eater Oldrik 
+            members='2, 3, 5', #Theslave Gael, Gigant Yourm, Blackfire Fride
             email='geology@mars.org'
         )
         session.add(geology_dept)
         session.commit()
 
-    # --- Добавление категорий ---
     if session.query(Category).count() == 0:
         category_construction = Category(name='Construction')
         category_research = Category(name='Research')
@@ -206,17 +182,12 @@ if session.query(User).count() == 0:
         session.add_all([category_construction, category_research, category_maintenance])
         session.commit()
 
-    # --- Связывание работы с категорией ---
-    # Предположим, первая работа принадлежит категории 'Construction'
     construction_category = session.query(Category).filter(Category.name == 'Construction').first()
     if construction_category:
         first_job.categories.append(construction_category)
         session.commit()
 
-
 session.close()
-
-# --- Функции для выполнения заданий 4-12 (остаются без изменений) ---
 
 def task_4(db_name):
     session = Session()
