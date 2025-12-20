@@ -8,9 +8,11 @@ from flask_login import UserMixin
 engine = create_engine('sqlite:///mars_explorer.db', echo=True)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
+
 association_table = Table('job_categories', Base.metadata,
     Column('job_id', Integer, ForeignKey('jobs.id'), primary_key=True),
-    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True))
+    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True)
+)
 
 class Category(Base):
     __tablename__ = 'categories'
@@ -22,7 +24,7 @@ class Category(Base):
 
 class User(Base, UserMixin):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)
     surname = Column(String, nullable=False)
     name = Column(String, nullable=False)
     age = Column(Integer, nullable=False)
@@ -30,9 +32,9 @@ class User(Base, UserMixin):
     speciality = Column(String, nullable=False)
     address = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
+    city_from = Column(String, nullable=True)
     _hashed_password = Column('hashed_password', String, nullable=False)
     modified_date = Column(DateTime, default=datetime.datetime.now)
-
     jobs_as_leader = relationship("Jobs", back_populates="team_leader_user")
     departments_led = relationship("Department", back_populates="chief_user")
 
@@ -51,7 +53,7 @@ class User(Base, UserMixin):
 
 class Jobs(Base):
     __tablename__ = 'jobs'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)
     team_leader = Column(Integer, ForeignKey('users.id'), nullable=False)
     job = Column(String, nullable=False)
     work_size = Column(Integer, nullable=False)
@@ -59,43 +61,42 @@ class Jobs(Base):
     start_date = Column(DateTime, default=datetime.datetime.now)
     end_date = Column(DateTime)
     is_finished = Column(Boolean, default=False)
-
     team_leader_user = relationship("User", back_populates="jobs_as_leader")
     categories = relationship("Category", secondary=association_table, lazy='subquery', backref="jobs")
 
     def __repr__(self):
         return f'<Job> {self.job}'
 
+
 class Department(Base):
     __tablename__ = 'departments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
     chief = Column(Integer, ForeignKey('users.id'), nullable=False)
-    members = Column(Text, nullable=False)
+    members = Column(Text, nullable=False) 
     email = Column(String, unique=True, nullable=False)
-
     chief_user = relationship("User", back_populates="departments_led")
 
 Base.metadata.create_all(engine)
-
 session = Session()
 
 if session.query(User).count() == 0:
     captain = User(
+        id=1, 
         surname='Scott',
         name='Ridley',
         age=21,
         position='captain',
         speciality='research engineer',
         address='module_1',
-        email='chief@mars.com',
+        email='scott_chief@mars.org',
+        city_from='London'
     )
-    captain.set_password('hash123')
-
+    captain.set_password('hash123') 
     session.add(captain)
-    session.commit()
 
     colonist1 = User(
+        id=2,
         surname='Theslave',
         name='Gael',
         age=25,
@@ -103,10 +104,12 @@ if session.query(User).count() == 0:
         speciality='biotech engineer',
         address='module_2',
         email='111@mars.com',
+        city_from='New York'
     )
     colonist1.set_password('hash123')
 
     colonist2 = User(
+        id=3, 
         surname='Eater',
         name='Oldrik',
         age=30,
@@ -114,10 +117,12 @@ if session.query(User).count() == 0:
         speciality='geologist',
         address='module_1',
         email='222@mars.com',
+        city_from='Moscow'
     )
     colonist2.set_password('hash123')
 
     colonist3 = User(
+        id=4, 
         surname='Gigant',
         name='Yourm',
         age=17,
@@ -125,10 +130,12 @@ if session.query(User).count() == 0:
         speciality='technician',
         address='module_1',
         email='333@mars.com',
+        city_from='Paris'
     )
     colonist3.set_password('hash123')
 
     colonist4 = User(
+        id=5, 
         surname='Fireceper',
         name='Cute',
         age=35,
@@ -136,10 +143,12 @@ if session.query(User).count() == 0:
         speciality='astrobiologist',
         address='module_3',
         email='444@mars.com',
+        city_from='Tokyo'
     )
     colonist4.set_password('hash123')
 
     colonist5 = User(
+        id=6, 
         surname='Blackfire',
         name='Fride',
         age=28,
@@ -147,6 +156,7 @@ if session.query(User).count() == 0:
         speciality='aviation engineer',
         address='module_1',
         email='555@mars.com',
+        city_from='Sydney'
     )
     colonist5.set_password('hash123')
 
@@ -155,10 +165,11 @@ if session.query(User).count() == 0:
 
     if session.query(Jobs).count() == 0:
         first_job = Jobs(
-            team_leader=captain.id,
+            id=1, 
+            team_leader=captain.id, 
             job='deployment of residential modules 1 and 2',
             work_size=15,
-            collaborators='2, 3', #(Theslave Gael, Gigant Yourm)
+            collaborators='2, 3',
             start_date=datetime.datetime.now(),
             is_finished=False
         )
@@ -168,8 +179,8 @@ if session.query(User).count() == 0:
     if session.query(Department).count() == 0:
         geology_dept = Department(
             title='Geological Survey',
-            chief=colonist2.id, # Eater Oldrik 
-            members='2, 3, 5', #Theslave Gael, Gigant Yourm, Blackfire Fride
+            chief=colonist2.id,
+            members='2, 3, 5',
             email='geology@mars.org'
         )
         session.add(geology_dept)
@@ -186,8 +197,8 @@ if session.query(User).count() == 0:
     if construction_category:
         first_job.categories.append(construction_category)
         session.commit()
-
 session.close()
+
 
 def task_4(db_name):
     session = Session()

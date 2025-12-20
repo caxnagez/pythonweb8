@@ -2,9 +2,17 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy.orm import joinedload
 from main import Session, User, Jobs, Department, Category, association_table
+import requests
+import urllib.parse 
+
+from jobs_api import jobs_api
+from user_api import user_api
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '_fVKXqO6pjprpyexco-4wi3tyuDkuvjw7vHhlz8A5jg'
+app.config['SECRET_KEY'] = 'your_secret_key_here'
+
+app.register_blueprint(jobs_api)
+app.register_blueprint(user_api)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -256,6 +264,26 @@ def delete_department(dept_id):
     session.commit()
     session.close()
     return redirect(url_for('departments'))
+
+@app.route('/users_show/<int:user_id>')
+def users_show(user_id):
+    api_url = url_for('user_api.get_user', user_id=user_id, _external=True)
+    try:
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            user_data = response.json().get('user', {})
+            city_from = user_data.get('city_from')
+            full_name = f"{user_data.get('surname', '')} {user_data.get('name', '')}".strip()
+            if not city_from:
+                return f"User {user_id} does not have a 'city_from' specified.", 404
+            encoded_city = urllib.parse.quote(city_from)
+            yandex_maps_url = f"https://yandex.ru/maps/?text={encoded_city}"
+            return render_template('user_map.html', user_full_name=full_name, city=city_from, yandex_url=yandex_maps_url)
+        else:
+            return f"Error fetching user data from API: {response.status_code}", 500
+    except requests.exceptions.RequestException as e:
+        return f"Error making request to API: {str(e)}", 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
