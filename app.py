@@ -9,7 +9,7 @@ from jobs_api import jobs_api
 from user_api import user_api
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'
+app.config['SECRET_KEY'] = '1240124=142-=4-124-214099124'
 
 app.register_blueprint(jobs_api)
 app.register_blueprint(user_api)
